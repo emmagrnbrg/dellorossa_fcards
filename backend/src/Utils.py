@@ -1,12 +1,14 @@
+import re
 from datetime import datetime
 from functools import wraps
-from random import randint
 from hashlib import sha512 as _sha512
+from random import randint
 from re import match
 
-from fastapi import HTTPException, status
+from fastapi import HTTPException, status, Request
 
 from backend.src.Constants import EMAIL_PATTERN, LOGIN_PATTERN
+from backend.src.exceptions.users.UserAlreadyAuthorizedException import UserAlreadyAuthorizedException
 from backend.src.models.enum.RightEnum import RightEnum
 from backend.src.models.enum.TemplateEnum import TemplateEnum
 from backend.src.models.rest.users.UserModel import UserModel
@@ -104,3 +106,30 @@ def validatePassword(password: str) -> str:
     if password and len(password) >= 8:
         return password
     raise ValueError("WRONG_PASSWORD_FORMAT")
+
+
+def isJwtToken(token):
+    """
+    Проверка того, что строка является JWT-токеном
+
+    :param token: токен
+    :return: признак того, что строка является JWT-токеном
+    """
+    jwtPattern = re.compile(r'^Bearer [A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$')
+    return bool(jwtPattern.match(token))
+
+
+def RequireUnauthorized(function):
+    @wraps(function)
+    async def _checkNotAuthorized(*args, **kwargs):
+        request: Request = kwargs.get("request")
+        bearerToken = request.headers.get("Authorization")
+        if not bearerToken or not isJwtToken(bearerToken):
+            return await function(*args, **kwargs)
+        try:
+            from backend.src.services.users.AuthorizationService import AuthorizationService
+            AuthorizationService(kwargs.get("session")).getCurrentUser(bearerToken.split(" ")[-1])
+        except Exception:
+            return await function(*args, **kwargs)
+        raise UserAlreadyAuthorizedException()
+    return _checkNotAuthorized

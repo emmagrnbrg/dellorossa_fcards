@@ -1,10 +1,11 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Body, Depends
+from fastapi import APIRouter, Body, Depends, Request
 from sqlalchemy.orm import Session
 from starlette.responses import Response
 
 from backend.src.Database import getDbSession
+from backend.src.Utils import RequireUnauthorized
 from backend.src.models.rest.users.OperationResponseModel import OperationResponseModel
 from backend.src.models.rest.users.PasswordRecoveryRequestModel import PasswordRecoveryRequestModel
 from backend.src.models.rest.users.PasswordResetRequestModel import PasswordResetRequestModel
@@ -14,16 +15,19 @@ router = APIRouter()
 
 
 @router.post("/password-recovery")
-async def recoveryPassword(request: Annotated[PasswordRecoveryRequestModel, Body()],
+@RequireUnauthorized
+async def recoveryPassword(request: Request,
+                           requestBody: Annotated[PasswordRecoveryRequestModel, Body()],
                            session: Session = Depends(getDbSession)) -> OperationResponseModel:
     """
     Запрос на восстановление пароля
 
-    :param request: тело запроса
+    :param request: Данные запроса
+    :param requestBody: тело запроса
     :param session: сессия соединения с БД
     :return: uuid созданной заявки
     """
-    return PasswordRecoveryService(session).recoveryPassword(request.email)
+    return PasswordRecoveryService(session).recoveryPassword(requestBody.email)
 
 
 @router.post("/{operationUuid}/reset-password")
