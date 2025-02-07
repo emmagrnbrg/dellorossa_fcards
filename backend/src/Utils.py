@@ -1,13 +1,13 @@
 import re
 from datetime import datetime
 from functools import wraps
-from hashlib import sha512 as _sha512
+from hashlib import sha512 as _sha512, sha1 as _sha1
 from random import randint
 from re import match
 
-from fastapi import HTTPException, status, Request
+from fastapi import HTTPException, status, Request, UploadFile
 
-from backend.src.Constants import EMAIL_PATTERN, LOGIN_PATTERN
+from backend.src.Constants import EMAIL_PATTERN, LOGIN_PATTERN, MAX_IMG_SIZE_BYTES
 from backend.src.exceptions.users.UserAlreadyAuthorizedException import UserAlreadyAuthorizedException
 from backend.src.models.enum.RightEnum import RightEnum
 from backend.src.models.enum.TemplateEnum import TemplateEnum
@@ -54,6 +54,16 @@ def sha512(openText: str) -> str:
     return _sha512(openText.encode()).hexdigest()
 
 
+def sha1(openText: str) -> str:
+    """
+    Хеширование текста алгоритмом SHA1
+
+    :param openText: открытый текст
+    :return: закрытый текст
+    """
+    return _sha1(openText.encode()).hexdigest()
+
+
 def hasRight(*, right: RightEnum):
     """
     Проверка пользовательских прав
@@ -81,7 +91,11 @@ def validateEmail(email: str) -> str:
     """
     if match(EMAIL_PATTERN, email):
         return email
-    raise ValueError("WRONG_EMAIL_FORMAT")
+    raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                        detail={
+                            "type": "WRONG_USERNAME_FORMAT",
+                            "detail": "Неверный формат адреса электронной почты."
+                        })
 
 
 def validateUsername(username: str) -> str:
@@ -93,7 +107,12 @@ def validateUsername(username: str) -> str:
     """
     if match(LOGIN_PATTERN, username):
         return username
-    raise ValueError("WRONG_USERNAME_FORMAT")
+    raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                        detail={
+                            "type": "WRONG_USERNAME_FORMAT",
+                            "detail": "Имя пользователя должно начинаться с латинского символа, "
+                                      "а также содержать латинские символы, цифры и символы нижнего подчеркивания."
+                        })
 
 
 def validatePassword(password: str) -> str:
@@ -105,7 +124,25 @@ def validatePassword(password: str) -> str:
     """
     if password and len(password) >= 8:
         return password
-    raise ValueError("WRONG_PASSWORD_FORMAT")
+    raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                        detail={
+                            "type": "WRONG_PASSWORD_FORMAT",
+                            "detail": "Пароль пользователя должен состоять минимум из 8 символов."
+                        })
+
+
+def trimStr(text: str) -> str | None:
+    """
+    Убрать повторяющиеся пробелы и лишние пробелы с начала и конца строки
+
+    :param text: строка
+    :return: отформатированная строка
+    """
+    if text is None:
+        return text
+    while "  " in text:
+        text = text.replace("  ", " ")
+    return text.strip()
 
 
 def isJwtToken(token):
@@ -133,3 +170,15 @@ def RequireUnauthorized(function):
             return await function(*args, **kwargs)
         raise UserAlreadyAuthorizedException()
     return _checkNotAuthorized
+
+
+def validateImage(image: UploadFile) -> bool:
+    """
+    Валидация загружаемого с формы файла (изображения)
+
+    :param image: изображение
+    :return: признак успешного прохождения валидации
+    """
+    if image.size > MAX_IMG_SIZE_BYTES or not image.content_type.startswith("image/"):
+        return False
+    return True

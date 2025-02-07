@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.encoders import jsonable_encoder
 
-from backend.src.routers import AuthorizationRouter, PasswordRecoveryRouter, RegistrationRouter
+from backend.src.routers import AuthorizationRouter, PasswordRecoveryRouter, RegistrationRouter, SetRouter
 
 app = FastAPI()
 
@@ -44,3 +44,4 @@ async def validationExceptionHandler(request: Request, e: RequestValidationError
 app.include_router(RegistrationRouter.router)
 app.include_router(AuthorizationRouter.router)
 app.include_router(PasswordRecoveryRouter.router)
+app.include_router(SetRouter.router)
