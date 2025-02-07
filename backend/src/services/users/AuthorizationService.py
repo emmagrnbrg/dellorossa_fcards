@@ -39,19 +39,14 @@ class AuthorizationService:
         return TokenResponseModel(refresh_token=self.__generateToken(user.id, REFRESH_TOKEN_LIFETIME_MINUTES),
                                   access_token=self.__generateToken(user.id, ACCESS_TOKEN_LIFETIME_MINUTES))
 
-    def getCurrentUser(self, token: str) -> UserModel:
+    def getCurrentUser(self, token: str) -> UserEntity:
         """
         Получить данные текущего авторизованного пользователя
 
         :param token: токен пользователя
         :return: текущий пользователь
         """
-        user = self.__checkToken(token)
-        return UserModel(id=user.id,
-                         email=user.email,
-                         username=user.username,
-                         role=user.role.name,
-                         rights=list(map(lambda right: right.name, user.role.rights)))
+        return self.__checkToken(token)
 
     def refreshToken(self, refreshToken: str) -> TokenResponseModel:
         """

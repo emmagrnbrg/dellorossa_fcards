@@ -5,6 +5,7 @@ from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
 from backend.src.Database import getDbSession
+from backend.src.models.db.users.UserEntity import UserEntity
 from backend.src.models.rest.users.RefreshTokenRequestModel import RefreshTokenRequestModel
 from backend.src.models.rest.users.TokenResponseModel import TokenResponseModel
 from backend.src.models.rest.users.UserModel import UserModel
@@ -17,7 +18,7 @@ oauth2Scheme = OAuth2PasswordBearer(tokenUrl="authenticate", scheme_name="JWT")
 
 
 async def getCurrentActiveUser(token: str = Depends(oauth2Scheme),
-                               session: Session = Depends(getDbSession)) -> UserModel:
+                               session: Session = Depends(getDbSession)) -> UserEntity:
     """
     Получить данные текущего авторизованного пользователя
 
@@ -42,14 +43,18 @@ def login(payload: OAuth2PasswordRequestForm = Depends(),
 
 
 @router.get("/user")
-def getCurrentUser(user: Annotated[UserModel, Depends(getCurrentActiveUser)]) -> UserModel:
+def getCurrentUser(user: Annotated[UserEntity, Depends(getCurrentActiveUser)]) -> UserModel:
     """
     Получить данные текущего авторизованного пользователя
 
     :param user: данные пользователя
     :return: данные пользователя
     """
-    return user
+    return UserModel(id=user.id,
+                     email=user.email,
+                     username=user.username,
+                     role=user.role.name,
+                     rights=list(map(lambda right: right.name, user.role.rights)))
 
 
 @router.post("/token/refresh")
