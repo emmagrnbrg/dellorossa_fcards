@@ -2,25 +2,25 @@ import re
 from datetime import datetime
 from functools import wraps
 from hashlib import sha512 as _sha512, sha1 as _sha1
-from random import randint
-from re import match
+from random import choice
+from typing import Callable
 
-from fastapi import HTTPException, status, Request, UploadFile
+from fastapi import HTTPException, status, UploadFile
+from sqlalchemy.orm import Query
 
-from backend.src.Constants import EMAIL_PATTERN, LOGIN_PATTERN, MAX_IMG_SIZE_BYTES
-from backend.src.exceptions.users.UserAlreadyAuthorizedException import UserAlreadyAuthorizedException
-from backend.src.models.enum.RightEnum import RightEnum
-from backend.src.models.enum.TemplateEnum import TemplateEnum
-from backend.src.models.rest.users.UserModel import UserModel
+from backend.src.Constants import MAX_IMG_SIZE_BYTES, DIGITS
+from backend.src.enums.TemplateEnum import TemplateEnum
+from backend.src.enums.UsersEnum import RightEnum
+from backend.src.models.PaginatedResponse import PaginatedResponse
 
 
-def generateCode() -> int:
+def generateCode() -> str:
     """
     Генерация одноразового кода
 
     :return: одноразовый код
     """
-    return randint(100000, 999999)
+    return "".join([choice(DIGITS) for _ in range(6)])
 
 
 def isExpired(timestamp: datetime) -> bool:
@@ -74,61 +74,13 @@ def hasRight(*, right: RightEnum):
     def checkRight(function):
         @wraps(function)
         async def _checkRight(*args, **kwargs):
-            user: UserModel = kwargs.get("user")
-            if not user or right not in user.rights:
+            from backend.src.entities.users.UserEntity import UserEntity
+            user: UserEntity = kwargs.get("user")
+            if not user or right not in user.role.rights:
                 raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
             function(*args, **kwargs)  # вызов оригинального метода
         return _checkRight
     return checkRight
-
-
-def validateEmail(email: str) -> str:
-    """
-    Валидация адреса электронной почты пользователя при регистрации
-
-    :param email: адрес электронной почты пользователя
-    :return: признак успешно пройденной валидации
-    """
-    if match(EMAIL_PATTERN, email):
-        return email
-    raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                        detail={
-                            "type": "WRONG_USERNAME_FORMAT",
-                            "detail": "Неверный формат адреса электронной почты."
-                        })
-
-
-def validateUsername(username: str) -> str:
-    """
-    Валидация имени пользователя при регистрации
-
-    :param username: имя пользователя
-    :return: признак успешно пройденной валидации
-    """
-    if match(LOGIN_PATTERN, username):
-        return username
-    raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                        detail={
-                            "type": "WRONG_USERNAME_FORMAT",
-                            "detail": "Имя пользователя должно начинаться с латинского символа, "
-                                      "а также содержать латинские символы, цифры и символы нижнего подчеркивания."
-                        })
-
-
-def validatePassword(password: str) -> str:
-    """
-    Валидация пароля пользователя при регистрации
-
-    :param password: пароль пользователя
-    :return: признак успешно пройденной валидации
-    """
-    if password and len(password) >= 8:
-        return password
-    raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                        detail={
-                            "type": "WRONG_PASSWORD_FORMAT",
-                            "detail": "Пароль пользователя должен состоять минимум из 8 символов."
-                        })
 
 
 def trimStr(text: str) -> str | None:
@@ -156,22 +108,6 @@ def isJwtToken(token):
     return bool(jwtPattern.match(token))
 
 
-def RequireUnauthorized(function):
-    @wraps(function)
-    async def _checkNotAuthorized(*args, **kwargs):
-        request: Request = kwargs.get("request")
-        bearerToken = request.headers.get("Authorization")
-        if not bearerToken or not isJwtToken(bearerToken):
-            return await function(*args, **kwargs)
-        try:
-            from backend.src.services.users.AuthorizationService import AuthorizationService
-            AuthorizationService(kwargs.get("session")).getCurrentUser(bearerToken.split(" ")[-1])
-        except Exception:
-            return await function(*args, **kwargs)
-        raise UserAlreadyAuthorizedException()
-    return _checkNotAuthorized
-
-
 def validateImage(image: UploadFile) -> bool:
     """
     Валидация загружаемого с формы файла (изображения)
@@ -182,3 +118,31 @@ def validateImage(image: UploadFile) -> bool:
     if image.size > MAX_IMG_SIZE_BYTES or not image.content_type.startswith("image/"):
         return False
     return True
+
+
+def getPaginated(page: int,
+                 size: int,
+                 query: Query,
+                 convert: Callable) -> PaginatedResponse:
+    """
+    Отформатировать ответ с учётом пагинации
+
+    :param page: необходимая страница
+    :param size: необходимое кол-во элементов на странице
+    :param query: отфильтрованный запрос
+    :param convert: конвертация элементов сущностей в модели для API
+    :return: ответ с пагинацией
+    """
+    totalCount = query.count()
+    page = min(totalCount // size + 1, page)
+    offset = (page - 1) * size
+
+    query = query.offset(offset).limit(size)
+
+    return PaginatedResponse(
+        page=page,
+        size=query.count(),
+        totalCount=totalCount,
+        content=list(map(convert, query.all()))
+    )
+

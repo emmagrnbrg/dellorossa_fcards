@@ -5,12 +5,11 @@ from sqlalchemy.orm import Session
 
 from backend.src.Constants import REFRESH_TOKEN_LIFETIME_MINUTES, ACCESS_TOKEN_LIFETIME_MINUTES
 from backend.src.Utils import sha512, isExpired
+from backend.src.entities.users.UserEntity import UserEntity
 from backend.src.exceptions.users.AuthenticationException import AuthenticationException
 from backend.src.exceptions.users.SessionExpiredException import SessionExpiredException
 from backend.src.exceptions.users.UserException import UserException
-from backend.src.models.db.users.UserEntity import UserEntity
-from backend.src.models.rest.users.TokenResponseModel import TokenResponseModel
-from backend.src.models.rest.users.UserModel import UserModel
+from backend.src.models.UserModel import TokenResponseModel
 from backend.src.services.SettingsService import SettingsService
 from backend.src.services.users.UserService import UserService
 
@@ -70,7 +69,7 @@ class AuthorizationService:
             userData = jwt.decode(token,
                                   self.__settingService.getAccessTokenSecretKey(),
                                   algorithms=[self.__settingService.getAccessTokenAlgorithm()])
-        except JWTError:
+        except Exception:
             raise UserException()
 
         userId, expireTime = userData.get("userId"), userData.get("expireTime")

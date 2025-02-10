@@ -2,7 +2,8 @@ from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from backend.src.Utils import sha512
-from backend.src.models.db.users.UserEntity import UserEntity
+from backend.src.entities.users.UserEntity import UserEntity
+from backend.src.enums.UsersEnum import RightEnum
 
 
 class UserService:
@@ -53,3 +54,14 @@ class UserService:
         user.password = sha512(password)
         self.__session.add(user)
         self.__session.commit()
+
+    @staticmethod
+    def hasRight(user: UserEntity, right: RightEnum) -> bool:
+        """
+        Проверить, есть ли у пользователя указанное право
+
+        :param user: пользователь
+        :param right: право для проверки
+        :return: наличие у пользователя указанного права
+        """
+        return right in list(map(lambda _right: _right.name, user.role.rights))

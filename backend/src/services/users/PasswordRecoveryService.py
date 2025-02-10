@@ -1,13 +1,12 @@
 from sqlalchemy.orm import Session
 
 from backend.src.Utils import readEmailTemplate
+from backend.src.entities.users.OperationEntity import OperationEntity
+from backend.src.entities.users.UserEntity import UserEntity
+from backend.src.enums.TemplateEnum import TemplateEnum
+from backend.src.enums.UsersEnum import OperationTypeEnum
 from backend.src.exceptions.users.UserNotExistsException import UserNotExistsException
-from backend.src.models.db.users.OperationEntity import OperationEntity
-from backend.src.models.db.users.UserEntity import UserEntity
-from backend.src.models.enum.OperationTypeEnum import OperationTypeEnum
-from backend.src.models.enum.TemplateEnum import TemplateEnum
-from backend.src.models.rest.users.OperationResponseModel import OperationResponseModel
-from backend.src.models.rest.users.PasswordResetRequestModel import PasswordResetRequestModel
+from backend.src.models.UserModel import OperationResponseModel, PasswordResetRequestModel
 from backend.src.services.EmailService import EmailService
 from backend.src.services.users.OperationService import OperationService
 from backend.src.services.users.UserService import UserService
