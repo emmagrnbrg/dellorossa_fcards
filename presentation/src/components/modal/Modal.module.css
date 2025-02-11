@@ -1,0 +1,14 @@
+.modal {
+    position: absolute;
+    top: calc(50% - 540px / 2);
+    left: calc(50% - 720px / 2);
+    width: fit-content;
+    max-width: 720px;
+    height: fit-content;
+    z-index: 10000;
+    opacity: 100%;
+    background: #1C1C21;
+    border-radius: 40px;
+    box-sizing: border-box;
+    box-shadow: 0 24px 32px rgba(0, 0, 0, 0.04), 0 16px 24px rgba(0, 0, 0, 0.04), 0 4px 8px rgba(0, 0, 0, 0.04), 0px 0px 1px rgba(0, 0, 0, 0.04);
+}

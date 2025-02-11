@@ -1,0 +1,8 @@
+.modalHeader {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    height: 64px;
+    padding: 40px 40px 0 40px;
+}

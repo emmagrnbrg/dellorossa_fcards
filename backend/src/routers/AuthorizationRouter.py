@@ -5,19 +5,17 @@ from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
 from backend.src.Database import getDbSession
-from backend.src.models.db.users.UserEntity import UserEntity
-from backend.src.models.rest.users.RefreshTokenRequestModel import RefreshTokenRequestModel
-from backend.src.models.rest.users.TokenResponseModel import TokenResponseModel
-from backend.src.models.rest.users.UserModel import UserModel
+from backend.src.entities.users.UserEntity import UserEntity
+from backend.src.models.UserModel import TokenResponseModel, UserModel, RefreshTokenRequestModel
 from backend.src.services.users.AuthorizationService import AuthorizationService
 
 router = APIRouter()
 
 # аутентификация
-oauth2Scheme = OAuth2PasswordBearer(tokenUrl="authenticate", scheme_name="JWT")
+oauth2Scheme = OAuth2PasswordBearer(tokenUrl="authenticate", scheme_name="JWT", auto_error=False)
 
 
-async def getCurrentActiveUser(token: str = Depends(oauth2Scheme),
+async def getCurrentActiveUser(token: str | None = Depends(oauth2Scheme),
                                session: Session = Depends(getDbSession)) -> UserEntity:
     """
     Получить данные текущего авторизованного пользователя
@@ -26,6 +24,20 @@ async def getCurrentActiveUser(token: str = Depends(oauth2Scheme),
     :param session: сессия соединения с БД
     :return: данные пользователя
     """
+    return AuthorizationService(session).getCurrentUser(token)
+
+
+async def getCurrentActiveUserOptional(token: str | None = Depends(oauth2Scheme),
+                                       session: Session = Depends(getDbSession)) -> UserEntity | None:
+    """
+    Опциональная проверка на авторизацию
+
+    :param token: access-токен при наличии
+    :param session: сессия соединения с БД
+    :return: данные пользователя в случае его авторизации
+    """
+    if token is None:
+        return None
     return AuthorizationService(session).getCurrentUser(token)
 
 

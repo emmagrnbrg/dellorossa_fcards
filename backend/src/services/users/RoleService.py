@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 
-from backend.src.models.db.users.RoleEntity import RoleEntity
-from backend.src.models.enum.RoleEnum import RoleEnum
+from backend.src.entities.users.RoleEntity import RoleEntity
+from backend.src.enums.UsersEnum import RoleEnum
 
 
 class RoleService:

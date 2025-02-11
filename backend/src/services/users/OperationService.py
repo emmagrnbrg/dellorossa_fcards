@@ -1,10 +1,10 @@
 from sqlalchemy.orm import Session
 
 from backend.src.Utils import isExpired
+from backend.src.entities.users.OperationEntity import OperationEntity
+from backend.src.enums.UsersEnum import OperationTypeEnum
 from backend.src.exceptions.users.IncorrectCodeException import IncorrectCodeException
 from backend.src.exceptions.users.OperationExpiredException import OperationExpiredException
-from backend.src.models.db.users.OperationEntity import OperationEntity
-from backend.src.models.enum.OperationTypeEnum import OperationTypeEnum
 from backend.src.services.users.UserService import UserService
 
 
@@ -29,7 +29,7 @@ class OperationService:
         self.__session.commit()
         return operation
 
-    def verify(self, operationType: OperationTypeEnum, uuid: str, code: int) -> OperationEntity:
+    def verify(self, operationType: OperationTypeEnum, uuid: str, code: str) -> OperationEntity:
         """
         Проверить подлинность введённого одноразового кода
 
